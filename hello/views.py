@@ -1,57 +1,42 @@
-from django.shortcuts import render
-from django.views.generic import ListView
-from django.shortcuts import redirect
-from hello.forms import LogMessageForm
-from hello.models import LogMessage
+from .serializers import MessageSerializer
+from .models import LogMessage
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
 from django.utils.timezone import datetime
 # from django.http import HttpResponse
 
 from django.http import JsonResponse
-class HomeListView(ListView):
-    """Renders the home page, with a list of all messages."""
-    model = LogMessage
-
-    def get_context_data(self, **kwargs):
-        context = super(HomeListView, self).get_context_data(**kwargs)
-        return context
-def hello_there(request, name):
-    return render(
-        request,
-        'hello/hello_there.html',
-        {
-            'name': name,
-            'date': datetime.now()
-        }
-    )
-def homes(request):
-    return render(request, "hello/home.html")
-def about(request):
-    return render(request,'hello/about.html')
-def contact(request):
-    return render(request,'hello/contact.html')
 
 
 
 
 # Add this code elsewhere in the file:
-def log_message(request):
-    form = LogMessageForm(request.POST or None)
+
+@api_view(['GET','POST'])
+def log_api(request):
+    if request.method=='GET':
+        logs=LogMessage.objects.all()
+        serializer=MessageSerializer(logs,many=True)
+        return Response({'status':True,'data':serializer.data,'message':'success'})
+      
     
+    if request.method=='POST':
+        data=request.data
+        # data['log_date']=datetime.now()
+        serializer=MessageSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'status':True,'data':serializer.data,'msg':'log created successfully'})
+        return Response(serializer.errors)
 
 
-    if request.method == "POST":
-        if form.is_valid():
-            message = form.save(commit=False)
-            message.log_date = datetime.now()
-            message.save()
-            return redirect("home")
-        
-    else:
-        return render(request, "hello/log_message.html", {"form": form})    
+
 
 def json(request):
-    data=list(LogMessage.objects.values())
-    return JsonResponse(data,safe=False)
+    data=LogMessage.objects.values()
+    print(data)
+    
+    return JsonResponse(list(data),safe=False)
 
     
